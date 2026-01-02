@@ -19,7 +19,6 @@
       --btn2:#5b5a54;
       --accent:#9a2240;
       --shadow: rgba(0,0,0,.28);
-      --radius: 22px;
       --font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
     *{box-sizing:border-box}
@@ -86,7 +85,6 @@
       border: 1px solid rgba(0,0,0,.12);
       border-radius: 12px; padding: 8px 10px;
     }
-
     .controls{
       display:grid;
       grid-template-columns: 1fr 1fr;
@@ -99,8 +97,8 @@
       margin: 0 auto;
       position: relative;
       filter: drop-shadow(0 8px 12px rgba(0,0,0,.18));
-      touch-action: manipulation;
       -webkit-user-select:none; user-select:none;
+      touch-action: manipulation;
     }
     .dpad button{
       position:absolute;
@@ -110,10 +108,9 @@
       font-weight: 900;
       border-radius: 14px;
       box-shadow: inset 0 2px 0 rgba(255,255,255,.18), 0 8px 16px rgba(0,0,0,.22);
-      user-select:none;
       -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
       cursor:pointer;
+      touch-action: manipulation;
     }
     .dpad .up{ left:50%; top:0; transform:translateX(-50%); width:58px; height:58px;}
     .dpad .down{ left:50%; bottom:0; transform:translateX(-50%); width:58px; height:58px;}
@@ -125,11 +122,10 @@
       background: linear-gradient(180deg, #4f4e48, #3f3e39);
       pointer-events:none;
     }
-
     .ab{
       display:flex; justify-content:center; gap:14px; align-items:center;
-      touch-action: manipulation;
       -webkit-user-select:none; user-select:none;
+      touch-action: manipulation;
     }
     .ab .big{
       width:66px; height:66px;
@@ -140,10 +136,9 @@
       color: rgba(255,255,255,.92);
       font-weight: 900;
       font-size: 16px;
-      user-select:none;
       -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
       cursor:pointer;
+      touch-action: manipulation;
     }
     .ab .smallrow{ display:flex; gap:10px; margin-left:8px; }
     .ab .small{
@@ -155,12 +150,10 @@
       color: rgba(255,255,255,.9);
       font-weight: 900;
       font-size: 12px;
-      user-select:none;
       -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
       cursor:pointer;
+      touch-action: manipulation;
     }
-    button{ touch-action: manipulation; }
     .footer{
       display:flex; justify-content:space-between; gap:12px; margin-top: 10px;
       color:#24332a; font-size:11px; opacity:.9;
@@ -185,7 +178,7 @@
           </div>
           <canvas id="c" width="256" height="256" aria-label="Gioco Snake"></canvas>
           <div class="hint" id="msg">
-            Tocca il D-Pad o usa ↑ ↓ ← →. A = Pausa. B = Restart.
+            D-Pad o ↑ ↓ ← →. A/START = Pausa. B = Restart.
           </div>
         </div>
       </div>
@@ -218,7 +211,7 @@
 
 <script>
 (() => {
-  // --- PWA service worker
+  // Service Worker (ok)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
   }
@@ -242,23 +235,29 @@
     bestEl.textContent  = `BEST ${pad3(best)}`;
   }
 
-  // Game state
-  let snake, dir, nextDir, food, score, tickMs, timer, running, paused, dead;
+  let snake, dir, nextDir, food, score;
+  let running = true, paused = false, dead = false;
+
+  // --- loop fluido (requestAnimationFrame + timestep fisso)
+  let tickMs = 110;          // più giocabile
+  let acc = 0;
+  let last = 0;
+  let rafId = 0;
 
   function reset() {
     snake = [{x:8,y:9},{x:7,y:9},{x:6,y:9}];
     dir = 'R';
     nextDir = 'R';
     score = 0;
-    tickMs = 120;
-    dead = false;
-    paused = false;
+    tickMs = 110;
     running = true;
+    paused = false;
+    dead = false;
     spawnFood();
     updateHUD();
-    msgEl.textContent = 'A/START = Pausa. B = Restart. Vai.';
-    startLoop();
-    draw(false);
+    msgEl.textContent = 'PLAY — A/START = Pausa. B = Restart.';
+    acc = 0;
+    last = performance.now();
   }
 
   function spawnFood() {
@@ -275,6 +274,12 @@
     if (d !== opposite[dir]) nextDir = d;
   }
 
+  function gameOver() {
+    dead = true;
+    msgEl.textContent = 'GAME OVER. Premi B per ricominciare.';
+    draw(true);
+  }
+
   function step() {
     if (!running || paused || dead) return;
 
@@ -284,7 +289,6 @@
     const ny = head.y + (dir==='U'?-1:dir==='D'?1:0);
 
     if (nx < 0 || ny < 0 || nx >= GRID || ny >= GRID) return gameOver();
-
     const hit = snake.some((p,i) => i>0 && p.x===nx && p.y===ny);
     if (hit) return gameOver();
 
@@ -294,20 +298,13 @@
       score = Math.min(999, score + 5);
       best = Math.max(best, score);
       localStorage.setItem(storageBest, String(best));
+      // accelera morbido ma non “ingiocabile”
       tickMs = Math.max(70, tickMs - 2);
       spawnFood();
       updateHUD();
-      // ricalibra loop con nuova velocità
-      startLoop();
     } else {
       snake.pop();
     }
-  }
-
-  function gameOver() {
-    dead = true;
-    msgEl.textContent = 'GAME OVER. Premi B per ricominciare.';
-    draw(true);
   }
 
   function draw(isOver=false) {
@@ -315,6 +312,7 @@
     ctx.fillStyle = 'rgba(0,0,0,.06)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
+    // griglia leggera
     ctx.strokeStyle = 'rgba(20,32,22,.10)';
     ctx.lineWidth = 1;
     for (let i=1;i<GRID;i++){
@@ -322,9 +320,11 @@
       ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(canvas.width,i*CELL); ctx.stroke();
     }
 
+    // food
     ctx.fillStyle = INK;
     ctx.fillRect(food.x*CELL + 5, food.y*CELL + 5, CELL-10, CELL-10);
 
+    // snake
     ctx.fillStyle = INK;
     snake.forEach((p,i) => {
       const inset = i===0 ? 2 : 3;
@@ -342,62 +342,81 @@
     }
   }
 
-  function startLoop(){
-    clearInterval(timer);
-    timer = setInterval(() => {
+  function loop(t){
+    rafId = requestAnimationFrame(loop);
+    const dt = t - last;
+    last = t;
+
+    // evita “salti” se la tab era in background
+    acc += Math.min(50, dt);
+
+    // step a tempo fisso
+    while (acc >= tickMs) {
       step();
-      draw(false);
-    }, tickMs);
+      acc -= tickMs;
+    }
+    draw(false);
   }
 
   function togglePause(){
     if (!running || dead) return;
     paused = !paused;
     msgEl.textContent = paused ? 'PAUSA (A/START per riprendere)' : 'PLAY';
-    draw(false);
   }
 
-  // --- Binding robusto (desktop + mobile) con feedback visivo
+  // --- FIX A: anti doppio evento (pointer+click) -> dedupe
   function bindPress(id, fn){
     const el = document.getElementById(id);
+    let lockUntil = 0;
+
     const run = () => {
+      const now = performance.now();
+      if (now < lockUntil) return;     // ignora doppio evento
+      lockUntil = now + 250;           // finestra anti-doppio
+
+      // feedback
       el.style.transform = 'translateY(1px)';
       setTimeout(() => el.style.transform = '', 80);
+
       fn();
     };
-    el.addEventListener('click', run);
-    el.addEventListener('pointerdown', (e) => { e.preventDefault(); run(); });
-    el.addEventListener('touchstart', (e) => { e.preventDefault(); run(); }, {passive:false});
+
+    // usa pointerup (meno doppioni del pointerdown)
+    el.addEventListener('pointerup', (e) => { e.preventDefault(); run(); });
+    // fallback click (se pointer non disponibile)
+    el.addEventListener('click', (e) => { e.preventDefault(); run(); });
+    // touch fallback
+    el.addEventListener('touchend', (e) => { e.preventDefault(); run(); }, {passive:false});
   }
 
   bindPress('btnA', togglePause);
   bindPress('btnStart', togglePause);
-  bindPress('btnB', reset);
+  bindPress('btnB', () => { reset(); });
   bindPress('btnSel', () => { msgEl.textContent = 'TIP: più mangi, più accelera.'; });
 
-  // D-Pad robusto
+  // D-Pad (una sola azione per pressione)
   document.querySelectorAll('.dpad button[data-dir]').forEach(btn => {
     const d = btn.dataset.dir;
-    const handler = (e) => { e.preventDefault(); setDir(d); };
-    btn.addEventListener('click', handler);
-    btn.addEventListener('pointerdown', handler);
-    btn.addEventListener('touchstart', handler, {passive:false});
+    btn.addEventListener('pointerup', (e) => { e.preventDefault(); setDir(d); });
+    btn.addEventListener('click', (e) => { e.preventDefault(); setDir(d); });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); setDir(d); }, {passive:false});
   });
 
-  // Tastiera
+  // Tastiera (aggiungo anche A per pausa, B per restart)
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (k === 'arrowup') setDir('U');
     else if (k === 'arrowdown') setDir('D');
     else if (k === 'arrowleft') setDir('L');
     else if (k === 'arrowright') setDir('R');
-    else if (k === ' ' || k === 'enter') togglePause();
-    else if (k === 'r' || k === 'backspace') reset();
+    else if (k === ' ' || k === 'enter' || k === 'a') togglePause();
+    else if (k === 'r' || k === 'backspace' || k === 'b') reset();
   }, {passive:true});
 
   // Avvio
-  updateHUD();
   reset();
+  cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(loop);
 })();
 </script>
 </body>
