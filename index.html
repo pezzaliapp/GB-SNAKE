@@ -178,7 +178,7 @@
           </div>
           <canvas id="c" width="256" height="256" aria-label="Gioco Snake"></canvas>
           <div class="hint" id="msg">
-            D-Pad o ↑ ↓ ← →. A/START = Pausa. B = Restart.
+            Premi A o START per iniziare. B = Restart.
           </div>
         </div>
       </div>
@@ -211,7 +211,6 @@
 
 <script>
 (() => {
-  // Service Worker (ok)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
   }
@@ -236,29 +235,14 @@
   }
 
   let snake, dir, nextDir, food, score;
-  let running = true, paused = false, dead = false;
+  let running = true, paused = true, dead = false;
+  let waitingStart = true;
 
-  // --- loop fluido (requestAnimationFrame + timestep fisso)
-  let tickMs = 110;          // più giocabile
+  // loop fluido
+  let tickMs = 110;
   let acc = 0;
   let last = 0;
   let rafId = 0;
-
-  function reset() {
-    snake = [{x:8,y:9},{x:7,y:9},{x:6,y:9}];
-    dir = 'R';
-    nextDir = 'R';
-    score = 0;
-    tickMs = 110;
-    running = true;
-    paused = false;
-    dead = false;
-    spawnFood();
-    updateHUD();
-    msgEl.textContent = 'PLAY — A/START = Pausa. B = Restart.';
-    acc = 0;
-    last = performance.now();
-  }
 
   function spawnFood() {
     const occupied = new Set(snake.map(p => `${p.x},${p.y}`));
@@ -269,6 +253,24 @@
     }
   }
 
+  function reset() {
+    snake = [{x:8,y:9},{x:7,y:9},{x:6,y:9}];
+    dir = 'R';
+    nextDir = 'R';
+    score = 0;
+    tickMs = 110;
+    running = true;
+    paused = true;       // NON parte da solo
+    dead = false;
+    waitingStart = true; // in attesa di A/START
+    spawnFood();
+    updateHUD();
+    msgEl.textContent = 'Premi A o START per iniziare. B = Restart.';
+    acc = 0;
+    last = performance.now();
+    draw(false);
+  }
+
   function setDir(d) {
     const opposite = {U:'D',D:'U',L:'R',R:'L'};
     if (d !== opposite[dir]) nextDir = d;
@@ -276,12 +278,14 @@
 
   function gameOver() {
     dead = true;
-    msgEl.textContent = 'GAME OVER. Premi B per ricominciare.';
+    waitingStart = false;
+    paused = true;
+    msgEl.textContent = 'GAME OVER. Premi A/START o B per ricominciare.';
     draw(true);
   }
 
   function step() {
-    if (!running || paused || dead) return;
+    if (!running || paused || dead || waitingStart) return;
 
     dir = nextDir;
     const head = snake[0];
@@ -298,7 +302,6 @@
       score = Math.min(999, score + 5);
       best = Math.max(best, score);
       localStorage.setItem(storageBest, String(best));
-      // accelera morbido ma non “ingiocabile”
       tickMs = Math.max(70, tickMs - 2);
       spawnFood();
       updateHUD();
@@ -312,7 +315,7 @@
     ctx.fillStyle = 'rgba(0,0,0,.06)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // griglia leggera
+    // griglia
     ctx.strokeStyle = 'rgba(20,32,22,.10)';
     ctx.lineWidth = 1;
     for (let i=1;i<GRID;i++){
@@ -331,14 +334,16 @@
       ctx.fillRect(p.x*CELL + inset, p.y*CELL + inset, CELL-2*inset, CELL-2*inset);
     });
 
-    if (paused || isOver) {
+    const showOverlay = paused || isOver || waitingStart;
+    if (showOverlay) {
       ctx.fillStyle = 'rgba(255,255,255,.35)';
       ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle = INK;
       ctx.font = '900 18px ui-monospace, Menlo, Monaco, Consolas, monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(isOver ? 'GAME OVER' : 'PAUSA', canvas.width/2, canvas.height/2);
+      const label = isOver ? 'GAME OVER' : (waitingStart ? 'PRESS A/START' : 'PAUSA');
+      ctx.fillText(label, canvas.width/2, canvas.height/2);
     }
   }
 
@@ -347,10 +352,7 @@
     const dt = t - last;
     last = t;
 
-    // evita “salti” se la tab era in background
     acc += Math.min(50, dt);
-
-    // step a tempo fisso
     while (acc >= tickMs) {
       step();
       acc -= tickMs;
@@ -358,43 +360,54 @@
     draw(false);
   }
 
-  function togglePause(){
-    if (!running || dead) return;
+  function startOrToggle(){
+    // game over -> restart e start
+    if (dead) {
+      reset();
+      waitingStart = false;
+      paused = false;
+      msgEl.textContent = 'PLAY';
+      return;
+    }
+    // start screen -> start
+    if (waitingStart) {
+      waitingStart = false;
+      paused = false;
+      msgEl.textContent = 'PLAY';
+      return;
+    }
+    // in game -> toggle pausa
     paused = !paused;
     msgEl.textContent = paused ? 'PAUSA (A/START per riprendere)' : 'PLAY';
   }
 
-  // --- FIX A: anti doppio evento (pointer+click) -> dedupe
+  // binding anti doppio evento
   function bindPress(id, fn){
     const el = document.getElementById(id);
     let lockUntil = 0;
 
     const run = () => {
       const now = performance.now();
-      if (now < lockUntil) return;     // ignora doppio evento
-      lockUntil = now + 250;           // finestra anti-doppio
+      if (now < lockUntil) return;
+      lockUntil = now + 250;
 
-      // feedback
       el.style.transform = 'translateY(1px)';
       setTimeout(() => el.style.transform = '', 80);
 
       fn();
     };
 
-    // usa pointerup (meno doppioni del pointerdown)
     el.addEventListener('pointerup', (e) => { e.preventDefault(); run(); });
-    // fallback click (se pointer non disponibile)
     el.addEventListener('click', (e) => { e.preventDefault(); run(); });
-    // touch fallback
     el.addEventListener('touchend', (e) => { e.preventDefault(); run(); }, {passive:false});
   }
 
-  bindPress('btnA', togglePause);
-  bindPress('btnStart', togglePause);
-  bindPress('btnB', () => { reset(); });
+  bindPress('btnA', startOrToggle);
+  bindPress('btnStart', startOrToggle);
+  bindPress('btnB', () => { reset(); }); // restart immediato
   bindPress('btnSel', () => { msgEl.textContent = 'TIP: più mangi, più accelera.'; });
 
-  // D-Pad (una sola azione per pressione)
+  // D-Pad
   document.querySelectorAll('.dpad button[data-dir]').forEach(btn => {
     const d = btn.dataset.dir;
     btn.addEventListener('pointerup', (e) => { e.preventDefault(); setDir(d); });
@@ -402,14 +415,14 @@
     btn.addEventListener('touchend', (e) => { e.preventDefault(); setDir(d); }, {passive:false});
   });
 
-  // Tastiera (aggiungo anche A per pausa, B per restart)
+  // Tastiera
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (k === 'arrowup') setDir('U');
     else if (k === 'arrowdown') setDir('D');
     else if (k === 'arrowleft') setDir('L');
     else if (k === 'arrowright') setDir('R');
-    else if (k === ' ' || k === 'enter' || k === 'a') togglePause();
+    else if (k === ' ' || k === 'enter' || k === 'a') startOrToggle();
     else if (k === 'r' || k === 'backspace' || k === 'b') reset();
   }, {passive:true});
 
