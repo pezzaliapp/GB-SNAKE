@@ -21,7 +21,6 @@
       --shadow: rgba(0,0,0,.28);
       --radius: 22px;
       --font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --pixel: 12; /* dimensione cella */
     }
     *{box-sizing:border-box}
     body{
@@ -31,7 +30,6 @@
       padding:16px;
     }
     .wrap{width:min(440px, 100%);}
-
     .handheld{
       background: linear-gradient(180deg, var(--shell), var(--shell2));
       border-radius: 34px;
@@ -102,6 +100,7 @@
       position: relative;
       filter: drop-shadow(0 8px 12px rgba(0,0,0,.18));
       touch-action: manipulation;
+      -webkit-user-select:none; user-select:none;
     }
     .dpad button{
       position:absolute;
@@ -113,6 +112,8 @@
       box-shadow: inset 0 2px 0 rgba(255,255,255,.18), 0 8px 16px rgba(0,0,0,.22);
       user-select:none;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      cursor:pointer;
     }
     .dpad .up{ left:50%; top:0; transform:translateX(-50%); width:58px; height:58px;}
     .dpad .down{ left:50%; bottom:0; transform:translateX(-50%); width:58px; height:58px;}
@@ -122,11 +123,13 @@
       left:50%; top:50%; transform:translate(-50%,-50%);
       width:62px; height:62px; border-radius: 18px;
       background: linear-gradient(180deg, #4f4e48, #3f3e39);
+      pointer-events:none;
     }
 
     .ab{
       display:flex; justify-content:center; gap:14px; align-items:center;
       touch-action: manipulation;
+      -webkit-user-select:none; user-select:none;
     }
     .ab .big{
       width:66px; height:66px;
@@ -139,6 +142,8 @@
       font-size: 16px;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      cursor:pointer;
     }
     .ab .smallrow{ display:flex; gap:10px; margin-left:8px; }
     .ab .small{
@@ -152,14 +157,15 @@
       font-size: 12px;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      cursor:pointer;
     }
-
+    button{ touch-action: manipulation; }
     .footer{
       display:flex; justify-content:space-between; gap:12px; margin-top: 10px;
       color:#24332a; font-size:11px; opacity:.9;
       padding: 0 6px;
     }
-    a{ color:inherit }
   </style>
 </head>
 
@@ -168,7 +174,7 @@
     <div class="handheld">
       <div class="brand">
         <div>GB SNAKE <small>FREE</small></div>
-        <div id="installHint" style="opacity:.75; font-weight:800;">Installabile</div>
+        <div style="opacity:.75; font-weight:800;">Installabile</div>
       </div>
 
       <div class="screen-bezel">
@@ -179,26 +185,26 @@
           </div>
           <canvas id="c" width="256" height="256" aria-label="Gioco Snake"></canvas>
           <div class="hint" id="msg">
-            Tocca il D-Pad o usa ↑ ↓ ← →. A = Start/Pausa. B = Restart.
+            Tocca il D-Pad o usa ↑ ↓ ← →. A = Pausa. B = Restart.
           </div>
         </div>
       </div>
 
       <div class="controls">
         <div class="dpad" aria-label="D-Pad">
-          <button class="up" data-dir="U">▲</button>
-          <button class="down" data-dir="D">▼</button>
-          <button class="left" data-dir="L">◀</button>
-          <button class="right" data-dir="R">▶</button>
+          <button type="button" class="up" data-dir="U">▲</button>
+          <button type="button" class="down" data-dir="D">▼</button>
+          <button type="button" class="left" data-dir="L">◀</button>
+          <button type="button" class="right" data-dir="R">▶</button>
           <div class="mid"></div>
         </div>
 
         <div class="ab" aria-label="Pulsanti">
-          <button class="big" id="btnA">A</button>
-          <button class="big" id="btnB">B</button>
+          <button type="button" class="big" id="btnA">A</button>
+          <button type="button" class="big" id="btnB">B</button>
           <div class="smallrow">
-            <button class="small" id="btnSel">SEL</button>
-            <button class="small" id="btnStart">START</button>
+            <button type="button" class="small" id="btnSel">SEL</button>
+            <button type="button" class="small" id="btnStart">START</button>
           </div>
         </div>
       </div>
@@ -223,8 +229,8 @@
   const bestEl  = document.getElementById('best');
   const msgEl   = document.getElementById('msg');
 
-  const GRID = 16;                  // 16x16 celle
-  const CELL = canvas.width / GRID; // 16px
+  const GRID = 16;
+  const CELL = canvas.width / GRID;
   const INK  = '#142016';
 
   const storageBest = 'gb_snake_best_v1';
@@ -244,14 +250,15 @@
     dir = 'R';
     nextDir = 'R';
     score = 0;
-    tickMs = 120; // velocità base
+    tickMs = 120;
     dead = false;
     paused = false;
     running = true;
     spawnFood();
     updateHUD();
-    msgEl.textContent = 'A = Pausa/Start. B = Restart. Buona caccia.';
-    loop();
+    msgEl.textContent = 'A/START = Pausa. B = Restart. Vai.';
+    startLoop();
+    draw(false);
   }
 
   function spawnFood() {
@@ -265,7 +272,6 @@
 
   function setDir(d) {
     const opposite = {U:'D',D:'U',L:'R',R:'L'};
-    // evita inversione istantanea
     if (d !== opposite[dir]) nextDir = d;
   }
 
@@ -277,25 +283,22 @@
     const nx = head.x + (dir==='L'?-1:dir==='R'?1:0);
     const ny = head.y + (dir==='U'?-1:dir==='D'?1:0);
 
-    // collisioni con bordo
     if (nx < 0 || ny < 0 || nx >= GRID || ny >= GRID) return gameOver();
 
-    // collisioni con sé stessa
     const hit = snake.some((p,i) => i>0 && p.x===nx && p.y===ny);
     if (hit) return gameOver();
 
-    // muovi
     snake.unshift({x:nx,y:ny});
 
-    // mangia
     if (nx === food.x && ny === food.y) {
       score = Math.min(999, score + 5);
       best = Math.max(best, score);
       localStorage.setItem(storageBest, String(best));
-      // aumenta leggermente velocità
       tickMs = Math.max(70, tickMs - 2);
       spawnFood();
       updateHUD();
+      // ricalibra loop con nuova velocità
+      startLoop();
     } else {
       snake.pop();
     }
@@ -308,12 +311,10 @@
   }
 
   function draw(isOver=false) {
-    // sfondo schermo
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle = 'rgba(0,0,0,.06)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // griglia leggera
     ctx.strokeStyle = 'rgba(20,32,22,.10)';
     ctx.lineWidth = 1;
     for (let i=1;i<GRID;i++){
@@ -321,45 +322,69 @@
       ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(canvas.width,i*CELL); ctx.stroke();
     }
 
-    // food
     ctx.fillStyle = INK;
     ctx.fillRect(food.x*CELL + 5, food.y*CELL + 5, CELL-10, CELL-10);
 
-    // snake
     ctx.fillStyle = INK;
     snake.forEach((p,i) => {
       const inset = i===0 ? 2 : 3;
       ctx.fillRect(p.x*CELL + inset, p.y*CELL + inset, CELL-2*inset, CELL-2*inset);
     });
 
-    // overlay pausa / gameover
     if (paused || isOver) {
       ctx.fillStyle = 'rgba(255,255,255,.35)';
       ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle = INK;
-      ctx.font = '900 18px ' + getComputedStyle(document.body).fontFamily;
+      ctx.font = '900 18px ui-monospace, Menlo, Monaco, Consolas, monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(isOver ? 'GAME OVER' : 'PAUSA', canvas.width/2, canvas.height/2);
     }
   }
 
-  function loop() {
+  function startLoop(){
     clearInterval(timer);
     timer = setInterval(() => {
       step();
       draw(false);
     }, tickMs);
-
-    // “adaptive loop”: ricalibra quando tickMs cambia (mangiando)
-    const adapt = setInterval(() => {
-      if (!running) { clearInterval(adapt); return; }
-      clearInterval(timer);
-      timer = setInterval(() => { step(); draw(false); }, tickMs);
-    }, 250);
   }
 
-  // Input: tastiera
+  function togglePause(){
+    if (!running || dead) return;
+    paused = !paused;
+    msgEl.textContent = paused ? 'PAUSA (A/START per riprendere)' : 'PLAY';
+    draw(false);
+  }
+
+  // --- Binding robusto (desktop + mobile) con feedback visivo
+  function bindPress(id, fn){
+    const el = document.getElementById(id);
+    const run = () => {
+      el.style.transform = 'translateY(1px)';
+      setTimeout(() => el.style.transform = '', 80);
+      fn();
+    };
+    el.addEventListener('click', run);
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); run(); });
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); run(); }, {passive:false});
+  }
+
+  bindPress('btnA', togglePause);
+  bindPress('btnStart', togglePause);
+  bindPress('btnB', reset);
+  bindPress('btnSel', () => { msgEl.textContent = 'TIP: più mangi, più accelera.'; });
+
+  // D-Pad robusto
+  document.querySelectorAll('.dpad button[data-dir]').forEach(btn => {
+    const d = btn.dataset.dir;
+    const handler = (e) => { e.preventDefault(); setDir(d); };
+    btn.addEventListener('click', handler);
+    btn.addEventListener('pointerdown', handler);
+    btn.addEventListener('touchstart', handler, {passive:false});
+  });
+
+  // Tastiera
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (k === 'arrowup') setDir('U');
@@ -370,33 +395,8 @@
     else if (k === 'r' || k === 'backspace') reset();
   }, {passive:true});
 
-  // Input: D-pad touch/click
-  document.querySelectorAll('.dpad button[data-dir]').forEach(btn => {
-    const d = btn.dataset.dir;
-    const h = () => setDir(d);
-    btn.addEventListener('pointerdown', h);
-    btn.addEventListener('click', h);
-  });
-
-  // Buttons A/B/Start/Select
-  function togglePause(){
-    if (!running) return;
-    if (dead) return;
-    paused = !paused;
-    msgEl.textContent = paused ? 'In pausa. Premi A/Start per riprendere.' : 'Vai.';
-    draw(false);
-  }
-  document.getElementById('btnA').addEventListener('click', togglePause);
-  document.getElementById('btnStart').addEventListener('click', togglePause);
-  document.getElementById('btnB').addEventListener('click', reset);
-  document.getElementById('btnSel').addEventListener('click', () => {
-    // mini “mute” visivo: solo messaggio
-    msgEl.textContent = 'Tip: più mangi, più accelera. (↑↓←→ o D-Pad)';
-  });
-
   // Avvio
   updateHUD();
-  draw(false);
   reset();
 })();
 </script>
