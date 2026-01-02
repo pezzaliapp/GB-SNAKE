@@ -9,31 +9,48 @@
   <style>
     :root{
       --bg:#0a120d;
+
+      /* shell / device */
       --shell:#c9c7b8;
       --shell2:#bdbbad;
       --bezel:#1b2a21;
+
+      /* LCD */
       --screen:#b9caa6;
       --screen2:#9fb18f;
       --ink:#142016;
+
+      /* buttons */
       --btn:#6b6a63;
       --btn2:#5b5a54;
       --accent:#9a2240;
+
+      /* game palette */
+      --snake:#142016;
+      --food:#142016;
+      --bonus:#142016;
+      --mine:#142016;
+
       --shadow: rgba(0,0,0,.28);
       --font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
+
     *{box-sizing:border-box}
     body{
-      margin:0; background: radial-gradient(1200px 800px at 50% -10%, #1b2a21, var(--bg));
+      margin:0;
+      background: radial-gradient(1200px 800px at 50% -10%, #1b2a21, var(--bg));
       color:#eef3ea; font-family: var(--font);
       min-height:100svh; display:flex; align-items:center; justify-content:center;
       padding:16px;
     }
-    .wrap{width:min(440px, 100%);}
+
+    .wrap{width:min(520px, 100%);}
+
     .handheld{
       background: linear-gradient(180deg, var(--shell), var(--shell2));
       border-radius: 34px;
       box-shadow: 0 18px 60px var(--shadow);
-      padding: 18px 18px 22px;
+      padding: 18px 18px 18px;
       border: 1px solid rgba(255,255,255,.35);
       position: relative;
       overflow: hidden;
@@ -44,12 +61,34 @@
       transform: rotate(18deg);
       pointer-events:none;
     }
-    .brand{
-      display:flex; align-items:center; justify-content:space-between;
+
+    .toprow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
       padding: 2px 6px 10px;
-      color:#2c3a31; font-weight:700; letter-spacing:.08em; font-size:12px;
+      color:#2c3a31;
+      font-weight:800;
+      letter-spacing:.08em;
+      font-size:12px;
     }
-    .brand small{opacity:.75; font-weight:700}
+    .toprow small{opacity:.75; font-weight:800}
+    .mini{
+      display:flex; align-items:center; gap:8px;
+      opacity:.85;
+      font-size:11px;
+      letter-spacing:.04em;
+    }
+    .pill{
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.15);
+      background: rgba(255,255,255,.28);
+      color:#24332a;
+      font-weight:900;
+    }
+
     .screen-bezel{
       background: linear-gradient(180deg, #22352b, var(--bezel));
       border-radius: 18px;
@@ -57,6 +96,7 @@
       border: 1px solid rgba(255,255,255,.08);
       box-shadow: inset 0 10px 20px rgba(0,0,0,.28);
     }
+
     .screen{
       background: linear-gradient(180deg, var(--screen), var(--screen2));
       border-radius: 10px;
@@ -64,12 +104,14 @@
       border: 1px solid rgba(0,0,0,.25);
       position: relative;
     }
+
     canvas{
       width:100%; height:auto; display:block;
       image-rendering: pixelated;
       border-radius: 8px;
       background: rgba(0,0,0,.08);
     }
+
     .hud{
       position:absolute; inset:10px 10px auto 10px;
       display:flex; justify-content:space-between; gap:10px;
@@ -79,19 +121,30 @@
       text-shadow: 0 1px 0 rgba(255,255,255,.18);
       pointer-events:none;
     }
+
+    .hud .left, .hud .right{display:flex; gap:10px; align-items:center;}
+    .hearts{letter-spacing:.15em;}
+
     .hint{
-      margin-top:10px; opacity:.85; font-size:12px; line-height:1.3;
-      color:#1c2b22; background: rgba(255,255,255,.35);
+      margin-top:10px;
+      opacity:.90;
+      font-size:12px;
+      line-height:1.3;
+      color:#1c2b22;
+      background: rgba(255,255,255,.35);
       border: 1px solid rgba(0,0,0,.12);
-      border-radius: 12px; padding: 8px 10px;
+      border-radius: 12px;
+      padding: 8px 10px;
     }
+
     .controls{
       display:grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
-      margin-top: 18px;
+      margin-top: 16px;
       align-items:center;
     }
+
     .dpad{
       width: 160px; height: 160px;
       margin: 0 auto;
@@ -122,6 +175,7 @@
       background: linear-gradient(180deg, #4f4e48, #3f3e39);
       pointer-events:none;
     }
+
     .ab{
       display:flex; justify-content:center; gap:14px; align-items:center;
       -webkit-user-select:none; user-select:none;
@@ -154,31 +208,109 @@
       cursor:pointer;
       touch-action: manipulation;
     }
+
     .footer{
       display:flex; justify-content:space-between; gap:12px; margin-top: 10px;
       color:#24332a; font-size:11px; opacity:.9;
       padding: 0 6px;
     }
+
+    /* Settings + leaderboard panel */
+    .panel{
+      margin-top: 12px;
+      background: rgba(255,255,255,.24);
+      border: 1px solid rgba(0,0,0,.12);
+      border-radius: 14px;
+      padding: 10px;
+      color:#1c2b22;
+    }
+    .panelhead{
+      display:flex; justify-content:space-between; align-items:center;
+      font-weight:900; letter-spacing:.06em; font-size:12px;
+      margin-bottom:8px;
+      opacity:.95;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    label{font-size:11px; font-weight:900; opacity:.9;}
+    select, input{
+      width:100%;
+      padding:8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.45);
+      color:#16231c;
+      font-family: var(--font);
+      font-weight:900;
+      outline:none;
+    }
+    .row{
+      display:flex; gap:10px; align-items:center;
+    }
+    .btn{
+      padding:8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.45);
+      color:#16231c;
+      font-family: var(--font);
+      font-weight:900;
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .hidden{display:none;}
+
+    .lb{
+      margin-top:10px;
+      border-top:1px solid rgba(0,0,0,.10);
+      padding-top:10px;
+    }
+    .lb table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:11px;
+      font-weight:900;
+    }
+    .lb td{
+      padding:6px 4px;
+      border-bottom:1px solid rgba(0,0,0,.08);
+    }
+    .lb td:last-child{text-align:right;}
   </style>
 </head>
 
 <body>
   <div class="wrap">
     <div class="handheld">
-      <div class="brand">
+
+      <div class="toprow">
         <div>GB SNAKE <small>FREE</small></div>
-        <div style="opacity:.75; font-weight:800;">Installabile</div>
+        <div class="mini">
+          <span class="pill" id="modePill">NORMAL</span>
+          <span class="pill" id="installPill">Installabile</span>
+        </div>
       </div>
 
       <div class="screen-bezel">
         <div class="screen">
           <div class="hud">
-            <div id="score">SCORE 000</div>
-            <div id="best">BEST 000</div>
+            <div class="left">
+              <div id="score">SCORE 000</div>
+              <div id="level">LV 01</div>
+            </div>
+            <div class="right">
+              <div class="hearts" id="lives">♥♥♥</div>
+              <div id="best">BEST 000</div>
+            </div>
           </div>
+
           <canvas id="c" width="256" height="256" aria-label="Gioco Snake"></canvas>
+
           <div class="hint" id="msg">
-            Premi A o START per iniziare. B = Restart.
+            Premi A/START per iniziare. SEL = Settings. B = Restart.
           </div>
         </div>
       </div>
@@ -202,6 +334,86 @@
         </div>
       </div>
 
+      <div class="panel hidden" id="settingsPanel">
+        <div class="panelhead">
+          <div>SETTINGS</div>
+          <div class="row">
+            <button class="btn" id="btnClose">CLOSE</button>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div>
+            <label>Mode</label>
+            <select id="modeSel">
+              <option value="normal">Normal (3 vite)</option>
+              <option value="hard">Hard (2 vite)</option>
+              <option value="perma">Permadeath (1 vita)</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Difficulty</label>
+            <select id="diffSel">
+              <option value="easy">Easy</option>
+              <option value="mid" selected>Mid</option>
+              <option value="fast">Fast</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Device theme</label>
+            <select id="deviceTheme">
+              <option value="classic" selected>Classic</option>
+              <option value="black">Black</option>
+              <option value="indigo">Indigo</option>
+              <option value="clear">Clear</option>
+              <option value="lime">Lime</option>
+            </select>
+          </div>
+
+          <div>
+            <label>LCD palette</label>
+            <select id="lcdTheme">
+              <option value="gb" selected>GB Green</option>
+              <option value="mint">Mint</option>
+              <option value="sand">Sand</option>
+              <option value="ice">Ice</option>
+              <option value="night">Night</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Game ink</label>
+            <select id="inkTheme">
+              <option value="classic" selected>Classic Ink</option>
+              <option value="dark">Darker</option>
+              <option value="purple">Purple</option>
+              <option value="blue">Blue</option>
+              <option value="red">Red</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Player name (3 chars)</label>
+            <input id="nameInp" maxlength="3" placeholder="AAA" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn" id="btnApply">APPLY</button>
+          <button class="btn" id="btnResetLB">RESET LEADERBOARD</button>
+        </div>
+
+        <div class="lb">
+          <div class="panelhead" style="margin:0 0 6px 0;">
+            <div>LEADERBOARD (Local)</div>
+            <div id="lbTag" class="pill">NORMAL • MID</div>
+          </div>
+          <table id="lbTable"></table>
+        </div>
+      </div>
+
       <div class="footer">
         <div>Offline ✔︎</div>
         <div>© Free mini-PWA</div>
@@ -211,6 +423,7 @@
 
 <script>
 (() => {
+  // SW
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
   }
@@ -219,103 +432,399 @@
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
   const bestEl  = document.getElementById('best');
+  const levelEl = document.getElementById('level');
+  const livesEl = document.getElementById('lives');
   const msgEl   = document.getElementById('msg');
+  const modePill = document.getElementById('modePill');
+
+  const settingsPanel = document.getElementById('settingsPanel');
+  const btnClose = document.getElementById('btnClose');
+  const btnApply = document.getElementById('btnApply');
+  const btnResetLB = document.getElementById('btnResetLB');
+  const lbTable = document.getElementById('lbTable');
+  const lbTag = document.getElementById('lbTag');
+
+  const modeSel = document.getElementById('modeSel');
+  const diffSel = document.getElementById('diffSel');
+  const deviceThemeSel = document.getElementById('deviceTheme');
+  const lcdThemeSel = document.getElementById('lcdTheme');
+  const inkThemeSel = document.getElementById('inkTheme');
+  const nameInp = document.getElementById('nameInp');
 
   const GRID = 16;
   const CELL = canvas.width / GRID;
-  const INK  = '#142016';
 
-  const storageBest = 'gb_snake_best_v1';
-  let best = Number(localStorage.getItem(storageBest) || 0);
+  // --- storage keys
+  const KEY = {
+    best: 'gb_snake_best_v2',
+    settings: 'gb_snake_settings_v2',
+    lb: 'gb_snake_lb_v2'
+  };
 
-  function pad3(n){ return String(n).padStart(3,'0'); }
-  function updateHUD() {
-    scoreEl.textContent = `SCORE ${pad3(score)}`;
-    bestEl.textContent  = `BEST ${pad3(best)}`;
+  // --- themes
+  const DEVICE = {
+    classic:{'--shell':'#c9c7b8','--shell2':'#bdbbad','--bezel':'#1b2a21','--btn':'#6b6a63','--btn2':'#5b5a54','--accent':'#9a2240'},
+    black:  {'--shell':'#2a2f33','--shell2':'#171a1d','--bezel':'#0f1417','--btn':'#444a50','--btn2':'#2e3338','--accent':'#d23a5a'},
+    indigo: {'--shell':'#4f5aa8','--shell2':'#2f3569','--bezel':'#14183a','--btn':'#3a3f6f','--btn2':'#262a4b','--accent':'#ff4d7d'},
+    clear:  {'--shell':'rgba(255,255,255,.55)','--shell2':'rgba(255,255,255,.25)','--bezel':'rgba(20,40,30,.55)','--btn':'rgba(90,90,90,.55)','--btn2':'rgba(60,60,60,.55)','--accent':'rgba(170,20,60,.85)'},
+    lime:   {'--shell':'#cfe08c','--shell2':'#a8c15f','--bezel':'#2a3a21','--btn':'#5b6a47','--btn2':'#465237','--accent':'#b0173f'}
+  };
+
+  const LCD = {
+    gb:    {'--screen':'#b9caa6','--screen2':'#9fb18f','--ink':'#142016'},
+    mint:  {'--screen':'#bfe3da','--screen2':'#9fd0c3','--ink':'#0f1f1b'},
+    sand:  {'--screen':'#d6d0b3','--screen2':'#bfb792','--ink':'#2a2517'},
+    ice:   {'--screen':'#c8d7e6','--screen2':'#a9c1d9','--ink':'#101a22'},
+    night: {'--screen':'#2a3b34','--screen2':'#1a2a25','--ink':'#d7f5e6'}
+  };
+
+  const INKTHEME = {
+    classic: {'--snake':'var(--ink)','--food':'var(--ink)','--bonus':'var(--ink)','--mine':'var(--ink)'},
+    dark:    {'--snake':'#0b120d','--food':'#0b120d','--bonus':'#0b120d','--mine':'#0b120d'},
+    purple:  {'--snake':'#2b1640','--food':'#2b1640','--bonus':'#5a2d84','--mine':'#3a1a56'},
+    blue:    {'--snake':'#0f2440','--food':'#0f2440','--bonus':'#1f5ea8','--mine':'#153a66'},
+    red:     {'--snake':'#3a1118','--food':'#3a1118','--bonus':'#a21b2b','--mine':'#5a151f'}
+  };
+
+  function applyTheme(deviceKey, lcdKey, inkKey){
+    const d = DEVICE[deviceKey] || DEVICE.classic;
+    const l = LCD[lcdKey] || LCD.gb;
+    const i = INKTHEME[inkKey] || INKTHEME.classic;
+    const root = document.documentElement.style;
+    Object.entries(d).forEach(([k,v]) => root.setProperty(k,v));
+    Object.entries(l).forEach(([k,v]) => root.setProperty(k,v));
+    // resolve var(--ink) only at runtime: keep as is
+    Object.entries(i).forEach(([k,v]) => root.setProperty(k,v));
   }
 
-  let snake, dir, nextDir, food, score;
-  let running = true, paused = true, dead = false;
-  let waitingStart = true;
+  // --- settings model
+  const defaultSettings = {
+    mode: 'normal',    // normal / hard / perma
+    diff: 'mid',       // easy / mid / fast
+    device: 'classic',
+    lcd: 'gb',
+    ink: 'classic',
+    name: 'YOU'
+  };
 
-  // loop fluido
+  function loadSettings(){
+    try{
+      const s = JSON.parse(localStorage.getItem(KEY.settings) || 'null');
+      return {...defaultSettings, ...(s||{})};
+    }catch{
+      return {...defaultSettings};
+    }
+  }
+  function saveSettings(s){
+    localStorage.setItem(KEY.settings, JSON.stringify(s));
+  }
+
+  let settings = loadSettings();
+  applyTheme(settings.device, settings.lcd, settings.ink);
+  modePill.textContent = settings.mode.toUpperCase();
+
+  // --- leaderboard (local)
+  function lbKey(){
+    return `${settings.mode}|${settings.diff}`;
+  }
+  function loadLB(){
+    try{
+      const all = JSON.parse(localStorage.getItem(KEY.lb) || '{}');
+      return all[lbKey()] || [];
+    }catch{ return []; }
+  }
+  function saveLB(list){
+    const all = (() => { try { return JSON.parse(localStorage.getItem(KEY.lb) || '{}'); } catch { return {}; } })();
+    all[lbKey()] = list;
+    localStorage.setItem(KEY.lb, JSON.stringify(all));
+  }
+  function renderLB(){
+    const list = loadLB();
+    lbTag.textContent = `${settings.mode.toUpperCase()} • ${settings.diff.toUpperCase()}`;
+    lbTable.innerHTML = list.length
+      ? list.map((r, idx) => `<tr><td>${idx+1}.</td><td>${r.name}</td><td>${String(r.score).padStart(3,'0')}</td></tr>`).join('')
+      : `<tr><td colspan="3">Nessun record ancora.</td></tr>`;
+  }
+
+  // --- game state
+  let snake, dir, nextDir, score, best;
+  let food, bonus, bonusTTL, mines;
+  let level, lives;
+  let paused = true, dead = false, waitingStart = true;
+
+  // loop
   let tickMs = 110;
   let acc = 0;
   let last = 0;
   let rafId = 0;
 
-  function spawnFood() {
-    const occupied = new Set(snake.map(p => `${p.x},${p.y}`));
-    while (true) {
-      const x = Math.floor(Math.random()*GRID);
-      const y = Math.floor(Math.random()*GRID);
-      if (!occupied.has(`${x},${y}`)) { food = {x,y}; return; }
+  // score thresholds for levels
+  function levelFromScore(sc){
+    // ogni 25 punti sale di livello
+    return Math.min(99, 1 + Math.floor(sc / 25));
+  }
+
+  function livesByMode(mode){
+    if (mode === 'perma') return 1;
+    if (mode === 'hard') return 2;
+    return 3;
+  }
+
+  function baseTickByDiff(diff){
+    if (diff === 'easy') return 125;
+    if (diff === 'fast') return 95;
+    return 110;
+  }
+
+  function minesForLevel(lv){
+    // mine crescono lentamente
+    return Math.min(8, 1 + Math.floor((lv-1)/2));
+  }
+
+  function formatHearts(n){
+    return '♥'.repeat(Math.max(0,n)) + '·'.repeat(Math.max(0,3-n));
+  }
+
+  function pad3(n){ return String(n).padStart(3,'0'); }
+  function updateHUD(){
+    scoreEl.textContent = `SCORE ${pad3(score)}`;
+    bestEl.textContent  = `BEST ${pad3(best)}`;
+    levelEl.textContent = `LV ${String(level).padStart(2,'0')}`;
+    livesEl.textContent = formatHearts(lives);
+  }
+
+  function randCell(){
+    return {x: Math.floor(Math.random()*GRID), y: Math.floor(Math.random()*GRID)};
+  }
+
+  function keyOf(p){ return `${p.x},${p.y}`; }
+
+  function isOccupied(x,y, occSet){
+    return occSet.has(`${x},${y}`);
+  }
+
+  function placeFood(){
+    const occ = new Set(snake.map(keyOf));
+    mines.forEach(m => occ.add(keyOf(m)));
+    if (bonus) occ.add(keyOf(bonus));
+    while(true){
+      const p = randCell();
+      if(!isOccupied(p.x,p.y,occ)){ food = p; return; }
     }
   }
 
-  function reset() {
+  function placeMines(count){
+    const occ = new Set(snake.map(keyOf));
+    occ.add(keyOf(food));
+    if (bonus) occ.add(keyOf(bonus));
+    const arr = [];
+    while(arr.length < count){
+      const p = randCell();
+      const k = keyOf(p);
+      if (!occ.has(k)){
+        occ.add(k);
+        arr.push(p);
+      }
+    }
+    mines = arr;
+  }
+
+  function maybeSpawnBonus(){
+    // bonus raro ma “stimolante”
+    // chance aumenta con livello
+    if (bonus) return;
+    const chance = Math.min(0.14, 0.05 + (level-1)*0.01);
+    if (Math.random() < chance){
+      const occ = new Set(snake.map(keyOf));
+      mines.forEach(m => occ.add(keyOf(m)));
+      occ.add(keyOf(food));
+      while(true){
+        const p = randCell();
+        if(!occ.has(keyOf(p))){
+          bonus = p;
+          bonusTTL = 120; // ~120 tick (si spegne)
+          return;
+        }
+      }
+    }
+  }
+
+  function clearBonus(){
+    bonus = null;
+    bonusTTL = 0;
+  }
+
+  function resetRun(){
     snake = [{x:8,y:9},{x:7,y:9},{x:6,y:9}];
     dir = 'R';
     nextDir = 'R';
     score = 0;
-    tickMs = 110;
-    running = true;
-    paused = true;       // NON parte da solo
+
+    tickMs = baseTickByDiff(settings.diff);
+    level = 1;
+
+    lives = livesByMode(settings.mode);
+
+    paused = true;
     dead = false;
-    waitingStart = true; // in attesa di A/START
-    spawnFood();
+    waitingStart = true;
+
+    food = null;
+    bonus = null;
+    mines = [];
+
+    best = Number(localStorage.getItem(KEY.best) || 0);
+
+    placeFood();
+    placeMines(minesForLevel(level));
     updateHUD();
-    msgEl.textContent = 'Premi A o START per iniziare. B = Restart.';
+
+    msgEl.textContent = 'Premi A/START per iniziare. SEL = Settings. B = Restart.';
     acc = 0;
     last = performance.now();
     draw(false);
   }
 
-  function setDir(d) {
+  function setDir(d){
     const opposite = {U:'D',D:'U',L:'R',R:'L'};
     if (d !== opposite[dir]) nextDir = d;
   }
 
-  function gameOver() {
-    dead = true;
-    waitingStart = false;
+  function damage(reason){
+    lives -= 1;
+    updateHUD();
+
+    if (lives <= 0){
+      gameOver(reason);
+      return;
+    }
+
+    // “rinascita”: riposiziona snake al centro e ripulisce bonus
+    snake = [{x:8,y:9},{x:7,y:9},{x:6,y:9}];
+    dir = 'R';
+    nextDir = 'R';
+    clearBonus();
+    placeFood();
+    placeMines(minesForLevel(level));
     paused = true;
-    msgEl.textContent = 'GAME OVER. Premi A/START o B per ricominciare.';
-    draw(true);
+
+    msgEl.textContent = `COLPITO (${reason}). Hai perso una vita. Premi A/START.`;
   }
 
-  function step() {
-    if (!running || paused || dead || waitingStart) return;
+  function gameOver(reason){
+    dead = true;
+    paused = true;
+    waitingStart = false;
+
+    if (score > best){
+      best = score;
+      localStorage.setItem(KEY.best, String(best));
+    }
+    updateHUD();
+
+    // leaderboard qualify?
+    const lb = loadLB();
+    const worst = lb.length < 10 ? -1 : lb[lb.length-1].score;
+    const qualifies = score > worst;
+
+    msgEl.textContent = qualifies
+      ? `GAME OVER (${reason}). Nuovo record? Apri SEL per salvare in classifica.`
+      : `GAME OVER (${reason}). Premi A/START o B per ricominciare.`;
+
+    draw(true);
+    renderLB();
+  }
+
+  function commitScore(){
+    const name = (settings.name || 'YOU').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,3).padEnd(3,'_');
+    let lb = loadLB();
+    lb.push({name, score});
+    lb.sort((a,b) => b.score - a.score);
+    lb = lb.slice(0,10);
+    saveLB(lb);
+    renderLB();
+  }
+
+  function step(){
+    if (paused || dead || waitingStart) return;
 
     dir = nextDir;
     const head = snake[0];
     const nx = head.x + (dir==='L'?-1:dir==='R'?1:0);
     const ny = head.y + (dir==='U'?-1:dir==='D'?1:0);
 
-    if (nx < 0 || ny < 0 || nx >= GRID || ny >= GRID) return gameOver();
-    const hit = snake.some((p,i) => i>0 && p.x===nx && p.y===ny);
-    if (hit) return gameOver();
+    // bordo = morte/ danno
+    if (nx < 0 || ny < 0 || nx >= GRID || ny >= GRID){
+      return damage('BORDO');
+    }
+
+    // self = danno
+    const selfHit = snake.some((p,i) => i>0 && p.x===nx && p.y===ny);
+    if (selfHit) return damage('TE STESSO');
+
+    // mine = danno
+    const mineHit = mines.some(m => m.x===nx && m.y===ny);
+    if (mineHit) return damage('MINA');
 
     snake.unshift({x:nx,y:ny});
 
-    if (nx === food.x && ny === food.y) {
+    // food
+    if (food && nx===food.x && ny===food.y){
       score = Math.min(999, score + 5);
-      best = Math.max(best, score);
-      localStorage.setItem(storageBest, String(best));
-      tickMs = Math.max(70, tickMs - 2);
-      spawnFood();
+      // level up?
+      const newLevel = levelFromScore(score);
+      if (newLevel !== level){
+        level = newLevel;
+        // aumenta difficoltà: +mine e +velocità progressiva
+        const base = baseTickByDiff(settings.diff);
+        tickMs = Math.max(65, base - (level-1)*2);
+        msgEl.textContent = `LIVELLO ${String(level).padStart(2,'0')} — più veloce, più mine.`;
+        placeMines(minesForLevel(level));
+      }
+      // chance bonus
+      maybeSpawnBonus();
+
+      placeFood();
       updateHUD();
-    } else {
+    }
+    // bonus
+    else if (bonus && nx===bonus.x && ny===bonus.y){
+      score = Math.min(999, score + 20);
+      // chance vita extra (solo se < 3 e non perma)
+      if (settings.mode !== 'perma' && lives < 3 && Math.random() < 0.35){
+        lives += 1;
+        msgEl.textContent = 'BONUS! Vita extra.';
+      } else {
+        msgEl.textContent = 'BONUS! +20';
+      }
+      clearBonus();
+      updateHUD();
+    }
+    else{
       snake.pop();
+    }
+
+    // best
+    if (score > best){
+      best = score;
+      localStorage.setItem(KEY.best, String(best));
+      updateHUD();
+    }
+
+    // bonus decay
+    if (bonus){
+      bonusTTL -= 1;
+      if (bonusTTL <= 0) clearBonus();
     }
   }
 
-  function draw(isOver=false) {
+  function draw(isOver=false){
+    // background
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle = 'rgba(0,0,0,.06)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // griglia
+    // grid
     ctx.strokeStyle = 'rgba(20,32,22,.10)';
     ctx.lineWidth = 1;
     for (let i=1;i<GRID;i++){
@@ -323,27 +832,46 @@
       ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(canvas.width,i*CELL); ctx.stroke();
     }
 
+    // mines
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--mine').trim() || '#142016';
+    mines.forEach(m => {
+      ctx.fillRect(m.x*CELL + 6, m.y*CELL + 6, CELL-12, CELL-12);
+      // “dentini” pixel
+      ctx.clearRect(m.x*CELL + 7, m.y*CELL + 7, 2, 2);
+      ctx.clearRect(m.x*CELL + CELL-9, m.y*CELL + 7, 2, 2);
+    });
+
     // food
-    ctx.fillStyle = INK;
-    ctx.fillRect(food.x*CELL + 5, food.y*CELL + 5, CELL-10, CELL-10);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--food').trim() || '#142016';
+    if (food) ctx.fillRect(food.x*CELL + 5, food.y*CELL + 5, CELL-10, CELL-10);
+
+    // bonus (lampeggia)
+    if (bonus){
+      const col = getComputedStyle(document.documentElement).getPropertyValue('--bonus').trim() || '#142016';
+      const blink = ((bonusTTL/6)|0) % 2 === 0;
+      ctx.fillStyle = blink ? col : 'rgba(0,0,0,.12)';
+      ctx.fillRect(bonus.x*CELL + 4, bonus.y*CELL + 4, CELL-8, CELL-8);
+    }
 
     // snake
-    ctx.fillStyle = INK;
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--snake').trim() || '#142016';
     snake.forEach((p,i) => {
       const inset = i===0 ? 2 : 3;
       ctx.fillRect(p.x*CELL + inset, p.y*CELL + inset, CELL-2*inset, CELL-2*inset);
     });
 
-    const showOverlay = paused || isOver || waitingStart;
-    if (showOverlay) {
-      ctx.fillStyle = 'rgba(255,255,255,.35)';
+    // overlay states
+    const showOverlay = paused || isOver || waitingStart || settingsPanel.classList.contains('hidden')===false;
+    if (showOverlay){
+      // do not dim if settings open (panel is outside screen)
+      ctx.fillStyle = (settingsPanel.classList.contains('hidden') ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.20)');
       ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = INK;
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#142016';
       ctx.font = '900 18px ui-monospace, Menlo, Monaco, Consolas, monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const label = isOver ? 'GAME OVER' : (waitingStart ? 'PRESS A/START' : 'PAUSA');
-      ctx.fillText(label, canvas.width/2, canvas.height/2);
+      const label = isOver ? 'GAME OVER' : (waitingStart ? 'PRESS A/START' : (paused ? 'PAUSE' : ''));
+      if (label) ctx.fillText(label, canvas.width/2, canvas.height/2);
     }
   }
 
@@ -351,63 +879,109 @@
     rafId = requestAnimationFrame(loop);
     const dt = t - last;
     last = t;
-
     acc += Math.min(50, dt);
-    while (acc >= tickMs) {
+    while (acc >= tickMs){
       step();
       acc -= tickMs;
     }
-    draw(false);
+    draw(dead);
   }
 
   function startOrToggle(){
-    // game over -> restart e start
-    if (dead) {
-      reset();
+    if (settingsPanel.classList.contains('hidden') === false) return;
+
+    // game over -> restart and start
+    if (dead){
+      resetRun();
       waitingStart = false;
       paused = false;
       msgEl.textContent = 'PLAY';
       return;
     }
-    // start screen -> start
-    if (waitingStart) {
+    // waiting -> start
+    if (waitingStart){
       waitingStart = false;
       paused = false;
       msgEl.textContent = 'PLAY';
       return;
     }
-    // in game -> toggle pausa
+    // toggle pause
     paused = !paused;
     msgEl.textContent = paused ? 'PAUSA (A/START per riprendere)' : 'PLAY';
   }
 
-  // binding anti doppio evento
+  function toggleSettings(){
+    const open = settingsPanel.classList.contains('hidden');
+    if (open){
+      settingsPanel.classList.remove('hidden');
+      paused = true;
+      msgEl.textContent = 'SETTINGS aperto. APPLY per applicare.';
+      // preload fields
+      modeSel.value = settings.mode;
+      diffSel.value = settings.diff;
+      deviceThemeSel.value = settings.device;
+      lcdThemeSel.value = settings.lcd;
+      inkThemeSel.value = settings.ink;
+      nameInp.value = settings.name || 'YOU';
+      renderLB();
+    } else {
+      settingsPanel.classList.add('hidden');
+      msgEl.textContent = dead ? 'GAME OVER. Premi A/START o B.' : (waitingStart ? 'Premi A/START per iniziare.' : (paused ? 'PAUSA' : 'PLAY'));
+    }
+  }
+
+  // robust press binding (anti doppio evento)
   function bindPress(id, fn){
     const el = document.getElementById(id);
     let lockUntil = 0;
-
     const run = () => {
       const now = performance.now();
       if (now < lockUntil) return;
-      lockUntil = now + 250;
-
+      lockUntil = now + 220;
       el.style.transform = 'translateY(1px)';
       setTimeout(() => el.style.transform = '', 80);
-
       fn();
     };
-
     el.addEventListener('pointerup', (e) => { e.preventDefault(); run(); });
     el.addEventListener('click', (e) => { e.preventDefault(); run(); });
     el.addEventListener('touchend', (e) => { e.preventDefault(); run(); }, {passive:false});
   }
 
+  // Buttons
   bindPress('btnA', startOrToggle);
   bindPress('btnStart', startOrToggle);
-  bindPress('btnB', () => { reset(); }); // restart immediato
-  bindPress('btnSel', () => { msgEl.textContent = 'TIP: più mangi, più accelera.'; });
+  bindPress('btnB', () => { resetRun(); msgEl.textContent='Premi A/START per iniziare.'; });
+  bindPress('btnSel', toggleSettings);
+  btnClose.addEventListener('click', toggleSettings);
 
-  // D-Pad
+  // Apply settings
+  btnApply.addEventListener('click', () => {
+    const name = (nameInp.value || 'YOU').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,3) || 'YOU';
+    settings = {
+      mode: modeSel.value,
+      diff: diffSel.value,
+      device: deviceThemeSel.value,
+      lcd: lcdThemeSel.value,
+      ink: inkThemeSel.value,
+      name
+    };
+    saveSettings(settings);
+    applyTheme(settings.device, settings.lcd, settings.ink);
+    modePill.textContent = settings.mode.toUpperCase();
+    msgEl.textContent = 'Applicato. Premi A/START per giocare.';
+    // reset run with new params
+    resetRun();
+    renderLB();
+  });
+
+  // Reset LB
+  btnResetLB.addEventListener('click', () => {
+    if (!confirm('Azzerare la classifica per questa modalità/difficoltà?')) return;
+    saveLB([]);
+    renderLB();
+  });
+
+  // D-pad
   document.querySelectorAll('.dpad button[data-dir]').forEach(btn => {
     const d = btn.dataset.dir;
     btn.addEventListener('pointerup', (e) => { e.preventDefault(); setDir(d); });
@@ -415,7 +989,7 @@
     btn.addEventListener('touchend', (e) => { e.preventDefault(); setDir(d); }, {passive:false});
   });
 
-  // Tastiera
+  // Keyboard
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (k === 'arrowup') setDir('U');
@@ -423,11 +997,32 @@
     else if (k === 'arrowleft') setDir('L');
     else if (k === 'arrowright') setDir('R');
     else if (k === ' ' || k === 'enter' || k === 'a') startOrToggle();
-    else if (k === 'r' || k === 'backspace' || k === 'b') reset();
+    else if (k === 'b' || k === 'r' || k === 'backspace') { resetRun(); msgEl.textContent='Premi A/START per iniziare.'; }
+    else if (k === 's') toggleSettings();
   }, {passive:true});
 
-  // Avvio
-  reset();
+  // When settings open and you died, allow saving score quickly:
+  settingsPanel.addEventListener('dblclick', () => {
+    // double click panel to commit score (easter egg)
+    if (dead) commitScore();
+  });
+
+  // Commit score automatically when opening settings after game over (optional)
+  // We'll provide a buttonless way: if dead + qualifies, APPLY doesn't overwrite score, so we offer commit via name field.
+  // Minimal: commit when closing settings if dead and score is in top 10
+  btnClose.addEventListener('click', () => {
+    if (!dead) return;
+    const lb = loadLB();
+    const worst = lb.length < 10 ? -1 : lb[lb.length-1].score;
+    if (score > worst) {
+      // use current settings name
+      commitScore();
+      msgEl.textContent = 'Score salvato in classifica. Premi A/START o B.';
+    }
+  });
+
+  // Start
+  resetRun();
   cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(loop);
 })();
