@@ -26,22 +26,32 @@
       --accent:#9a2240;
 
       /* game palette */
-      --snake:#142016;
-      --food:#142016;
-      --bonus:#142016;
-      --mine:#142016;
+      --snake: var(--ink);
+      --food:  var(--ink);
+      --bonus: var(--ink);
+      --mine:  var(--ink);
 
       --shadow: rgba(0,0,0,.28);
       --font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
 
     *{box-sizing:border-box}
+
+    /* iOS safe-area */
     body{
       margin:0;
       background: radial-gradient(1200px 800px at 50% -10%, #1b2a21, var(--bg));
-      color:#eef3ea; font-family: var(--font);
-      min-height:100svh; display:flex; align-items:center; justify-content:center;
-      padding:16px;
+      color:#eef3ea;
+      font-family: var(--font);
+      min-height:100svh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:
+        calc(16px + env(safe-area-inset-top))
+        calc(16px + env(safe-area-inset-right))
+        calc(16px + env(safe-area-inset-bottom))
+        calc(16px + env(safe-area-inset-left));
     }
 
     .wrap{width:min(520px, 100%);}
@@ -87,6 +97,7 @@
       background: rgba(255,255,255,.28);
       color:#24332a;
       font-weight:900;
+      white-space:nowrap;
     }
 
     .screen-bezel{
@@ -106,7 +117,9 @@
     }
 
     canvas{
-      width:100%; height:auto; display:block;
+      width:100%;
+      height:auto;
+      display:block;
       image-rendering: pixelated;
       border-radius: 8px;
       background: rgba(0,0,0,.08);
@@ -121,7 +134,6 @@
       text-shadow: 0 1px 0 rgba(255,255,255,.18);
       pointer-events:none;
     }
-
     .hud .left, .hud .right{display:flex; gap:10px; align-items:center;}
     .hearts{letter-spacing:.15em;}
 
@@ -135,6 +147,26 @@
       border: 1px solid rgba(0,0,0,.12);
       border-radius: 12px;
       padding: 8px 10px;
+    }
+
+    /* mobile command bar (shown on iPhone mini vertical) */
+    .mobilebar{
+      display:none;
+      gap:10px;
+      margin-top:10px;
+    }
+    .mkey{
+      flex:1;
+      padding:10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.45);
+      color:#16231c;
+      font-family: var(--font);
+      font-weight:900;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      cursor:pointer;
     }
 
     .controls{
@@ -260,6 +292,7 @@
       font-weight:900;
       cursor:pointer;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
     .hidden{display:none;}
 
@@ -279,6 +312,33 @@
       border-bottom:1px solid rgba(0,0,0,.08);
     }
     .lb td:last-child{text-align:right;}
+
+    /* Compact layout for iPhone mini vertical */
+    @media (max-height: 760px) and (max-width: 430px){
+      .wrap{ width: min(420px, 100%); }
+      .handheld{ padding: 12px; border-radius: 28px; }
+
+      .screen-bezel{ padding: 10px; border-radius: 16px; }
+      .screen{ padding: 10px; }
+
+      .controls{
+        margin-top: 12px;
+        gap: 10px;
+      }
+
+      .dpad{ width: 132px; height: 132px; }
+      .dpad .up, .dpad .down, .dpad .left, .dpad .right{ width:48px; height:48px; border-radius: 12px; }
+      .dpad .mid{ width:54px; height:54px; border-radius: 16px; }
+
+      .ab .big{ width:58px; height:58px; font-size:15px; }
+      .ab .small{ width:54px; height:28px; font-size:11px; }
+
+      /* SHOW mobilebar and HIDE smallrow (SEL/START below) */
+      .mobilebar{ display:flex; }
+      .ab .smallrow{ display:none; }
+
+      .hint{ font-size:11px; padding: 7px 9px; }
+    }
   </style>
 </head>
 
@@ -311,6 +371,12 @@
 
           <div class="hint" id="msg">
             Premi A/START per iniziare. SEL = Settings. B = Restart.
+          </div>
+
+          <!-- ALWAYS reachable on iPhone mini vertical -->
+          <div class="mobilebar" aria-label="Comandi rapidi">
+            <button type="button" class="mkey" id="mSel">SEL</button>
+            <button type="button" class="mkey" id="mStart">START</button>
           </div>
         </div>
       </div>
@@ -451,17 +517,19 @@
   const inkThemeSel = document.getElementById('inkTheme');
   const nameInp = document.getElementById('nameInp');
 
+  const mSel = document.getElementById('mSel');
+  const mStart = document.getElementById('mStart');
+
   const GRID = 16;
   const CELL = canvas.width / GRID;
 
-  // --- storage keys
   const KEY = {
     best: 'gb_snake_best_v2',
     settings: 'gb_snake_settings_v2',
     lb: 'gb_snake_lb_v2'
   };
 
-  // --- themes
+  // Themes
   const DEVICE = {
     classic:{'--shell':'#c9c7b8','--shell2':'#bdbbad','--bezel':'#1b2a21','--btn':'#6b6a63','--btn2':'#5b5a54','--accent':'#9a2240'},
     black:  {'--shell':'#2a2f33','--shell2':'#171a1d','--bezel':'#0f1417','--btn':'#444a50','--btn2':'#2e3338','--accent':'#d23a5a'},
@@ -493,14 +561,12 @@
     const root = document.documentElement.style;
     Object.entries(d).forEach(([k,v]) => root.setProperty(k,v));
     Object.entries(l).forEach(([k,v]) => root.setProperty(k,v));
-    // resolve var(--ink) only at runtime: keep as is
     Object.entries(i).forEach(([k,v]) => root.setProperty(k,v));
   }
 
-  // --- settings model
   const defaultSettings = {
-    mode: 'normal',    // normal / hard / perma
-    diff: 'mid',       // easy / mid / fast
+    mode: 'normal',
+    diff: 'mid',
     device: 'classic',
     lcd: 'gb',
     ink: 'classic',
@@ -523,10 +589,8 @@
   applyTheme(settings.device, settings.lcd, settings.ink);
   modePill.textContent = settings.mode.toUpperCase();
 
-  // --- leaderboard (local)
-  function lbKey(){
-    return `${settings.mode}|${settings.diff}`;
-  }
+  // Leaderboard
+  function lbKey(){ return `${settings.mode}|${settings.diff}`; }
   function loadLB(){
     try{
       const all = JSON.parse(localStorage.getItem(KEY.lb) || '{}');
@@ -546,46 +610,25 @@
       : `<tr><td colspan="3">Nessun record ancora.</td></tr>`;
   }
 
-  // --- game state
+  // Game state
   let snake, dir, nextDir, score, best;
   let food, bonus, bonusTTL, mines;
   let level, lives;
   let paused = true, dead = false, waitingStart = true;
 
-  // loop
+  // Loop
   let tickMs = 110;
   let acc = 0;
   let last = 0;
   let rafId = 0;
 
-  // score thresholds for levels
-  function levelFromScore(sc){
-    // ogni 25 punti sale di livello
-    return Math.min(99, 1 + Math.floor(sc / 25));
-  }
-
-  function livesByMode(mode){
-    if (mode === 'perma') return 1;
-    if (mode === 'hard') return 2;
-    return 3;
-  }
-
-  function baseTickByDiff(diff){
-    if (diff === 'easy') return 125;
-    if (diff === 'fast') return 95;
-    return 110;
-  }
-
-  function minesForLevel(lv){
-    // mine crescono lentamente
-    return Math.min(8, 1 + Math.floor((lv-1)/2));
-  }
-
-  function formatHearts(n){
-    return '♥'.repeat(Math.max(0,n)) + '·'.repeat(Math.max(0,3-n));
-  }
-
+  function levelFromScore(sc){ return Math.min(99, 1 + Math.floor(sc / 25)); }
+  function livesByMode(mode){ return mode==='perma' ? 1 : (mode==='hard' ? 2 : 3); }
+  function baseTickByDiff(diff){ return diff==='easy' ? 125 : (diff==='fast' ? 95 : 110); }
+  function minesForLevel(lv){ return Math.min(8, 1 + Math.floor((lv-1)/2)); }
+  function formatHearts(n){ return '♥'.repeat(Math.max(0,n)) + '·'.repeat(Math.max(0,3-n)); }
   function pad3(n){ return String(n).padStart(3,'0'); }
+
   function updateHUD(){
     scoreEl.textContent = `SCORE ${pad3(score)}`;
     bestEl.textContent  = `BEST ${pad3(best)}`;
@@ -593,15 +636,8 @@
     livesEl.textContent = formatHearts(lives);
   }
 
-  function randCell(){
-    return {x: Math.floor(Math.random()*GRID), y: Math.floor(Math.random()*GRID)};
-  }
-
+  function randCell(){ return {x: Math.floor(Math.random()*GRID), y: Math.floor(Math.random()*GRID)}; }
   function keyOf(p){ return `${p.x},${p.y}`; }
-
-  function isOccupied(x,y, occSet){
-    return occSet.has(`${x},${y}`);
-  }
 
   function placeFood(){
     const occ = new Set(snake.map(keyOf));
@@ -609,7 +645,7 @@
     if (bonus) occ.add(keyOf(bonus));
     while(true){
       const p = randCell();
-      if(!isOccupied(p.x,p.y,occ)){ food = p; return; }
+      if(!occ.has(keyOf(p))){ food = p; return; }
     }
   }
 
@@ -630,8 +666,6 @@
   }
 
   function maybeSpawnBonus(){
-    // bonus raro ma “stimolante”
-    // chance aumenta con livello
     if (bonus) return;
     const chance = Math.min(0.14, 0.05 + (level-1)*0.01);
     if (Math.random() < chance){
@@ -642,17 +676,14 @@
         const p = randCell();
         if(!occ.has(keyOf(p))){
           bonus = p;
-          bonusTTL = 120; // ~120 tick (si spegne)
+          bonusTTL = 120;
           return;
         }
       }
     }
   }
 
-  function clearBonus(){
-    bonus = null;
-    bonusTTL = 0;
-  }
+  function clearBonus(){ bonus = null; bonusTTL = 0; }
 
   function resetRun(){
     snake = [{x:8,y:9},{x:7,y:9},{x:6,y:9}];
@@ -695,11 +726,9 @@
     updateHUD();
 
     if (lives <= 0){
-      gameOver(reason);
-      return;
+      return gameOver(reason);
     }
 
-    // “rinascita”: riposiziona snake al centro e ripulisce bonus
     snake = [{x:8,y:9},{x:7,y:9},{x:6,y:9}];
     dir = 'R';
     nextDir = 'R';
@@ -722,13 +751,12 @@
     }
     updateHUD();
 
-    // leaderboard qualify?
     const lb = loadLB();
     const worst = lb.length < 10 ? -1 : lb[lb.length-1].score;
     const qualifies = score > worst;
 
     msgEl.textContent = qualifies
-      ? `GAME OVER (${reason}). Nuovo record? Apri SEL per salvare in classifica.`
+      ? `GAME OVER (${reason}). Apri SEL per salvare in classifica.`
       : `GAME OVER (${reason}). Premi A/START o B per ricominciare.`;
 
     draw(true);
@@ -753,44 +781,34 @@
     const nx = head.x + (dir==='L'?-1:dir==='R'?1:0);
     const ny = head.y + (dir==='U'?-1:dir==='D'?1:0);
 
-    // bordo = morte/ danno
-    if (nx < 0 || ny < 0 || nx >= GRID || ny >= GRID){
-      return damage('BORDO');
-    }
+    if (nx < 0 || ny < 0 || nx >= GRID || ny >= GRID) return damage('BORDO');
 
-    // self = danno
     const selfHit = snake.some((p,i) => i>0 && p.x===nx && p.y===ny);
     if (selfHit) return damage('TE STESSO');
 
-    // mine = danno
     const mineHit = mines.some(m => m.x===nx && m.y===ny);
     if (mineHit) return damage('MINA');
 
     snake.unshift({x:nx,y:ny});
 
-    // food
     if (food && nx===food.x && ny===food.y){
       score = Math.min(999, score + 5);
-      // level up?
+
       const newLevel = levelFromScore(score);
       if (newLevel !== level){
         level = newLevel;
-        // aumenta difficoltà: +mine e +velocità progressiva
         const base = baseTickByDiff(settings.diff);
         tickMs = Math.max(65, base - (level-1)*2);
         msgEl.textContent = `LIVELLO ${String(level).padStart(2,'0')} — più veloce, più mine.`;
         placeMines(minesForLevel(level));
       }
-      // chance bonus
-      maybeSpawnBonus();
 
+      maybeSpawnBonus();
       placeFood();
       updateHUD();
     }
-    // bonus
     else if (bonus && nx===bonus.x && ny===bonus.y){
       score = Math.min(999, score + 20);
-      // chance vita extra (solo se < 3 e non perma)
       if (settings.mode !== 'perma' && lives < 3 && Math.random() < 0.35){
         lives += 1;
         msgEl.textContent = 'BONUS! Vita extra.';
@@ -804,27 +822,27 @@
       snake.pop();
     }
 
-    // best
     if (score > best){
       best = score;
       localStorage.setItem(KEY.best, String(best));
       updateHUD();
     }
 
-    // bonus decay
     if (bonus){
       bonusTTL -= 1;
       if (bonusTTL <= 0) clearBonus();
     }
   }
 
+  function cssVar(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
   function draw(isOver=false){
-    // background
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle = 'rgba(0,0,0,.06)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // grid
     ctx.strokeStyle = 'rgba(20,32,22,.10)';
     ctx.lineWidth = 1;
     for (let i=1;i<GRID;i++){
@@ -833,45 +851,42 @@
     }
 
     // mines
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--mine').trim() || '#142016';
+    ctx.fillStyle = cssVar('--mine') || '#142016';
     mines.forEach(m => {
       ctx.fillRect(m.x*CELL + 6, m.y*CELL + 6, CELL-12, CELL-12);
-      // “dentini” pixel
       ctx.clearRect(m.x*CELL + 7, m.y*CELL + 7, 2, 2);
       ctx.clearRect(m.x*CELL + CELL-9, m.y*CELL + 7, 2, 2);
     });
 
     // food
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--food').trim() || '#142016';
+    ctx.fillStyle = cssVar('--food') || '#142016';
     if (food) ctx.fillRect(food.x*CELL + 5, food.y*CELL + 5, CELL-10, CELL-10);
 
-    // bonus (lampeggia)
+    // bonus blink
     if (bonus){
-      const col = getComputedStyle(document.documentElement).getPropertyValue('--bonus').trim() || '#142016';
+      const col = cssVar('--bonus') || '#142016';
       const blink = ((bonusTTL/6)|0) % 2 === 0;
       ctx.fillStyle = blink ? col : 'rgba(0,0,0,.12)';
       ctx.fillRect(bonus.x*CELL + 4, bonus.y*CELL + 4, CELL-8, CELL-8);
     }
 
     // snake
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--snake').trim() || '#142016';
+    ctx.fillStyle = cssVar('--snake') || '#142016';
     snake.forEach((p,i) => {
       const inset = i===0 ? 2 : 3;
       ctx.fillRect(p.x*CELL + inset, p.y*CELL + inset, CELL-2*inset, CELL-2*inset);
     });
 
-    // overlay states
-    const showOverlay = paused || isOver || waitingStart || settingsPanel.classList.contains('hidden')===false;
+    const showOverlay = paused || isOver || waitingStart;
     if (showOverlay){
-      // do not dim if settings open (panel is outside screen)
-      ctx.fillStyle = (settingsPanel.classList.contains('hidden') ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.20)');
+      ctx.fillStyle = 'rgba(255,255,255,.35)';
       ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#142016';
+      ctx.fillStyle = cssVar('--ink') || '#142016';
       ctx.font = '900 18px ui-monospace, Menlo, Monaco, Consolas, monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const label = isOver ? 'GAME OVER' : (waitingStart ? 'PRESS A/START' : (paused ? 'PAUSE' : ''));
-      if (label) ctx.fillText(label, canvas.width/2, canvas.height/2);
+      const label = isOver ? 'GAME OVER' : (waitingStart ? 'PRESS A/START' : 'PAUSE');
+      ctx.fillText(label, canvas.width/2, canvas.height/2);
     }
   }
 
@@ -890,7 +905,6 @@
   function startOrToggle(){
     if (settingsPanel.classList.contains('hidden') === false) return;
 
-    // game over -> restart and start
     if (dead){
       resetRun();
       waitingStart = false;
@@ -898,25 +912,22 @@
       msgEl.textContent = 'PLAY';
       return;
     }
-    // waiting -> start
     if (waitingStart){
       waitingStart = false;
       paused = false;
       msgEl.textContent = 'PLAY';
       return;
     }
-    // toggle pause
     paused = !paused;
     msgEl.textContent = paused ? 'PAUSA (A/START per riprendere)' : 'PLAY';
   }
 
   function toggleSettings(){
-    const open = settingsPanel.classList.contains('hidden');
-    if (open){
+    const willOpen = settingsPanel.classList.contains('hidden');
+    if (willOpen){
       settingsPanel.classList.remove('hidden');
       paused = true;
       msgEl.textContent = 'SETTINGS aperto. APPLY per applicare.';
-      // preload fields
       modeSel.value = settings.mode;
       diffSel.value = settings.diff;
       deviceThemeSel.value = settings.device;
@@ -930,9 +941,11 @@
     }
   }
 
-  // robust press binding (anti doppio evento)
-  function bindPress(id, fn){
-    const el = document.getElementById(id);
+  // robust press binding (anti double event)
+  function bindPress(elOrId, fn){
+    const el = (typeof elOrId === 'string') ? document.getElementById(elOrId) : elOrId;
+    if (!el) return;
+
     let lockUntil = 0;
     const run = () => {
       const now = performance.now();
@@ -942,6 +955,7 @@
       setTimeout(() => el.style.transform = '', 80);
       fn();
     };
+
     el.addEventListener('pointerup', (e) => { e.preventDefault(); run(); });
     el.addEventListener('click', (e) => { e.preventDefault(); run(); });
     el.addEventListener('touchend', (e) => { e.preventDefault(); run(); }, {passive:false});
@@ -952,7 +966,11 @@
   bindPress('btnStart', startOrToggle);
   bindPress('btnB', () => { resetRun(); msgEl.textContent='Premi A/START per iniziare.'; });
   bindPress('btnSel', toggleSettings);
-  btnClose.addEventListener('click', toggleSettings);
+  bindPress(btnClose, toggleSettings);
+
+  // Mobile mirrored keys (iPhone mini)
+  bindPress(mSel, () => document.getElementById('btnSel').click());
+  bindPress(mStart, () => document.getElementById('btnStart').click());
 
   // Apply settings
   btnApply.addEventListener('click', () => {
@@ -969,16 +987,22 @@
     applyTheme(settings.device, settings.lcd, settings.ink);
     modePill.textContent = settings.mode.toUpperCase();
     msgEl.textContent = 'Applicato. Premi A/START per giocare.';
-    // reset run with new params
     resetRun();
     renderLB();
   });
 
-  // Reset LB
   btnResetLB.addEventListener('click', () => {
     if (!confirm('Azzerare la classifica per questa modalità/difficoltà?')) return;
     saveLB([]);
     renderLB();
+  });
+
+  // Save score on close if qualifies
+  btnClose.addEventListener('click', () => {
+    if (!dead) return;
+    const lb = loadLB();
+    const worst = lb.length < 10 ? -1 : lb[lb.length-1].score;
+    if (score > worst) commitScore();
   });
 
   // D-pad
@@ -1000,26 +1024,6 @@
     else if (k === 'b' || k === 'r' || k === 'backspace') { resetRun(); msgEl.textContent='Premi A/START per iniziare.'; }
     else if (k === 's') toggleSettings();
   }, {passive:true});
-
-  // When settings open and you died, allow saving score quickly:
-  settingsPanel.addEventListener('dblclick', () => {
-    // double click panel to commit score (easter egg)
-    if (dead) commitScore();
-  });
-
-  // Commit score automatically when opening settings after game over (optional)
-  // We'll provide a buttonless way: if dead + qualifies, APPLY doesn't overwrite score, so we offer commit via name field.
-  // Minimal: commit when closing settings if dead and score is in top 10
-  btnClose.addEventListener('click', () => {
-    if (!dead) return;
-    const lb = loadLB();
-    const worst = lb.length < 10 ? -1 : lb[lb.length-1].score;
-    if (score > worst) {
-      // use current settings name
-      commitScore();
-      msgEl.textContent = 'Score salvato in classifica. Premi A/START o B.';
-    }
-  });
 
   // Start
   resetRun();
